@@ -35,7 +35,7 @@ class AsciiDocReader(BaseReader):
         """Parse content and metadata of asciidoc files"""
         from cStringIO import StringIO
         with pelican_open(source_path) as source:
-            text = StringIO(source)
+            text = StringIO(source.encode('utf8'))
         content = StringIO()
         ad = AsciiDocAPI()
 
@@ -46,7 +46,7 @@ class AsciiDocReader(BaseReader):
 
         backend = self.settings.get('ASCIIDOC_BACKEND', self.default_backend)
         ad.execute(text, content, backend=backend)
-        content = content.getvalue()
+        content = content.getvalue().decode('utf8')
 
         metadata = {}
         for name, value in ad.asciidoc.document.attributes.items():
@@ -54,6 +54,11 @@ class AsciiDocReader(BaseReader):
             metadata[name] = self.process_metadata(name, value)
         if 'doctitle' in metadata:
             metadata['title'] = metadata['doctitle']
+        if 'lang' in metadata and metadata['lang'] == None:
+            # After parsing the source, the metadata['lang'] is None rather than
+            # 'en', which results in incorrect html file name {slug}-None.html.
+            # So fix it
+            metadata['lang'] = 'en'
         return content, metadata
 
 def add_reader(readers):
